@@ -62,9 +62,13 @@ async function save_tx(tx, receipt, block) {
                 if (receipt) {
                     receipt_status = receipt.status.toString();
                 }
+                let tx_to = '';
+                if (tx.to) {
+                    tx_to = tx.to.toString();
+                }
 
                 const sql = 'INSERT INTO `j_tx` (`block_id`, `type`, `tx_index`,  `tx_hash`, `from`, `to`, `input`, `value`, `nonce`, `v`, `r`, `s`, `gas`, `gas_price`, `receipt_status`, `status`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
-                const values = [block.number.toString(), tx.type.toString(), tx.transactionIndex.toString(), tx.hash, tx.from.toString(), tx.to.toString(), tx.input.toString(), tx.value.toString(), tx.nonce.toString(), tx.v.toString(), tx.r.toString(), tx.s.toString(), tx.gas.toString(), tx.gasPrice.toString(), receipt_status, 1];
+                const values = [block.number.toString(), tx.type.toString(), tx.transactionIndex.toString(), tx.hash, tx.from.toString(), tx_to, tx.input.toString(), tx.value.toString(), tx.nonce.toString(), tx.v.toString(), tx.r.toString(), tx.s.toString(), tx.gas.toString(), tx.gasPrice.toString(), receipt_status, 1];
 
                 connection.execute(
                     sql,
