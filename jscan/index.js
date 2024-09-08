@@ -124,7 +124,7 @@ async function saveScanLastBlockId(lastId) {
     })
 }
 
-async function scan_block(limit=1000, loop=true) {
+async function scan_block(limit=100000, loop=true) {
 
     var scanLastBlockId = await getScanLastBlockId('SCAN_LAST_BLOCK_ID');
     var lastBlock = await web3.eth.getBlock();
