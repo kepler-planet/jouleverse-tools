@@ -162,7 +162,9 @@ async function scan_block(limit=1000, loop=true) {
 
     if (loop == true) {
         console.log("继续扫描下一轮");
-        setTimeout(scan_block(limit, loop), 1000);
+        setTimeout(() => {
+            scan_block(limit, loop)
+        }, 1000);
     }
 }
 
