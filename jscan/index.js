@@ -50,9 +50,7 @@ async function save_block(block) {
 
 // 保存交易信息
 async function save_tx(tx, receipt, block) {
-    process.stdout.write(`\r保存交易信息${tx.hash} \t`);
-    process.stdout.write(`3333保存交易信息${tx.hash} \t`);
-    process.stdout.write(`222保存交易信息${tx.hash} \t`);
+    process.stdout.write(`\r保存交易信息${tx.hash} \t\n`);
     
     connection.execute(
         'SELECT * FROM `j_tx` WHERE `tx_hash` = ?', [tx.hash],
