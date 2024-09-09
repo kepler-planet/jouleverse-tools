@@ -135,13 +135,11 @@ async function scan_block(limit=100000, loop=true) {
         catchUp = true;
     }
     if(roundNumber == 1) {
-        console.log("起始区块高度:" + scanLastBlockId);
-        console.log("最新区块高度:" + lastBlockIdOnChain);
+        console.log("历史扫描区块高度:" + scanLastBlockId);
     }
-    
     for (var i = scanLastBlockId; i <= endBlockId; i++) {
-       
-        process.stdout.write(`\r当前扫码区块高度:${i} \t`);
+        
+        process.stdout.write(`\r当前扫描区块高度:${i} ${catchUp?"(追赶模式)":"(正常模式)"} \t`);
 
         var block = await web3.eth.getBlock(i)
         var txCount = block.transactions.length
