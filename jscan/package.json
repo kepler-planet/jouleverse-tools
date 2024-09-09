@@ -6,15 +6,24 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
+    "api:start": "node app-koa.js",
+    "api:dev": "nodemon app-koa.js",
     "create-tables": "node create-tables.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "abi-decoder": "^2.4.0",
     "command-output": "^0.2.4",
     "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "json-bigint-patch": "^0.0.8",
+    "koa": "^2.15.3",
+    "koa-json": "^2.0.2",
+    "koa-router": "^12.0.1",
     "mysql2": "^3.11.0",
+    "nodemon": "^3.1.4",
     "web3": "^4.12.1"
   }
 }
