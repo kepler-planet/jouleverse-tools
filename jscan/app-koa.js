@@ -209,6 +209,10 @@ router.get('/api/txs', async (ctx, next) => {
 
 })
 
+router.get('/', async (ctx, next) => {
+    ctx.body = 'Hello World';
+})
+
 app.use(router.routes()).use(router.allowedMethods());
 
 app.listen(3000);
