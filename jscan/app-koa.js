@@ -9,6 +9,8 @@ const mysql = require('mysql2');
 const { Web3 } = require('web3');
 const web3 = new Web3(process.env.JSCAN_RPC_URL);
 const lib = require('./lib');
+const fs = require('fs');
+
 
 // 创建连接池，设置连接池的参数
 const connection = mysql.createPool({
@@ -44,6 +46,33 @@ abiDecoder.addABI(abiMultisig);
 abiDecoder.addABI(abiAddress);
 abiDecoder.addABI(boredape_ABI);
 
+router.get('/api', async (ctx, next) => {
+    // ctx.router available
+    const markdown = require('markdown-it')({
+        html: true,
+        linkify: true,
+        typographer: true
+      });
+    const md = fs.readFileSync('./jscan-api.md', 'utf8');
+    const content = markdown.render(md);
+    const html = `<!DOCTYPE html>
+    <html lang="zh-cn">
+    <head>
+    <title>Jscan API</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.6.1/github-markdown.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+    <article class="markdown-body" >
+    ${content}
+    </article>
+    </body>
+    </html>`;
+    ctx.body = html;
+    // ctx.body = { status: 'ok' , message: 'Welcome to Jscan API'};
+})
 
 // 0xfc10a523579230ec64380b8b7739506aa700b40d54c1d4b5f926d736f6def659
 router.get('/api/tx/:txid', async (ctx, next) => {
@@ -134,10 +163,18 @@ router.get('/api/txs', async (ctx, next) => {
     }
     if (ctx.query.limit) {
         limit = Number(ctx.query.limit);
+    } else if (ctx.query.size) {
+        limit = Number(ctx.query.size);
+    }
+    if (limit > 100) {
+        limit = 10;
     }
     if (ctx.query.offset) {
         offset = Number(ctx.query.offset)
+    } else if (ctx.query.page) {
+        offset = Number(ctx.query.page) * limit;
     }
+    
     sql += `ORDER BY block_id desc `;
     sql += `LIMIT ? OFFSET ?`;
     params.push(limit, offset);
@@ -171,18 +208,6 @@ router.get('/api/txs', async (ctx, next) => {
     ctx.body = { status: 'ok' , txs: results};
 
 })
-
-router.get('/api/tx/', (ctx, next) => {
-    // ctx.router available
-    ctx.body = 'Hello World!';
-});
-  
-
-
-// // response
-// app.use(ctx => {
-//     ctx.body = '{"status": "ok}';
-// });
 
 app.use(router.routes()).use(router.allowedMethods());
 
