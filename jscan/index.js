@@ -129,7 +129,7 @@ async function scan_block(limit=100000, loop=true) {
     var scanLastBlockId = await getScanLastBlockId('SCAN_LAST_BLOCK_ID');
     var lastBlock = await web3.eth.getBlock();
     var lastBlockIdOnChain = lastBlock.number.toString();
-    var endBlockId = Math.min((lastBlockIdOnChain - 100), (scanLastBlockId + limit));
+    var endBlockId = Math.min((lastBlockIdOnChain - 21), (scanLastBlockId + limit));
 
     console.log("起始区块高度:" + scanLastBlockId);
     console.log("最新区块高度:" + lastBlockIdOnChain);
