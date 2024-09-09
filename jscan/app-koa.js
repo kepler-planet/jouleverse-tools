@@ -144,6 +144,29 @@ router.get('/api/txs', async (ctx, next) => {
 
     const promisePool = connection.promise();
     const [results, fields] = await promisePool.query(sql, params);
+    if (results) {
+        for (var i = 0; i < results.length; i++) {
+            var tx = results[i];
+            delete tx['id'];
+            if (tx.input != '0x') {
+                var decodedData = abiDecoder.decodeMethod(tx.input);
+                if (decodedData) {
+                    tx.input_decode = decodedData;
+
+                    for (var j = 0; j < tx.input_decode.params.length; j++) {
+                        var param = tx.input_decode.params[j];
+                        if (param.name == 'data') {
+                            var decodedData2 = abiDecoder.decodeMethod(param.value);
+                            if (decodedData2) {
+                                tx.sub_input_decode = decodedData2;
+                            }
+                        }
+                        
+                    }
+                }
+            }
+        }
+    }
 
     ctx.body = { status: 'ok' , txs: results};
 
