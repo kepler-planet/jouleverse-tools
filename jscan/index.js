@@ -164,9 +164,14 @@ async function scan_block(limit=100000, loop=true) {
 
     if (loop == true) {
         console.log("继续扫描下一轮");
+        // 新区块 10 秒一个，等待 10 秒，再执行 
+        var timer = 10000; // 10秒
+        if( lastBlockIdOnChain - endBlockId > 100) {
+            timer = 1000; // 1秒
+        }
         setTimeout(() => {
             scan_block(limit, loop)
-        }, 3000);
+        }, timer);
     }
 }
 
