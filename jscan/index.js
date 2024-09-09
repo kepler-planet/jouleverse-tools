@@ -125,14 +125,20 @@ async function saveScanLastBlockId(lastId) {
 }
 
 async function scan_block(limit=100000, loop=true) {
-
+    roundNumber++;
     var scanLastBlockId = await getScanLastBlockId('SCAN_LAST_BLOCK_ID');
     var lastBlock = await web3.eth.getBlock();
     var lastBlockIdOnChain = lastBlock.number.toString();
     var endBlockId = Math.min((lastBlockIdOnChain - 21), (scanLastBlockId + limit));
-
-    console.log("起始区块高度:" + scanLastBlockId);
-    console.log("最新区块高度:" + lastBlockIdOnChain);
+    var catchUp = false;
+    if(lastBlockIdOnChain - endBlockId > 100) {
+        catchUp = true;
+    }
+    if(roundNumber == 1) {
+        console.log("起始区块高度:" + scanLastBlockId);
+        console.log("最新区块高度:" + lastBlockIdOnChain);
+    }
+    
     for (var i = scanLastBlockId; i <= endBlockId; i++) {
        
         process.stdout.write(`\r当前扫码区块高度:${i} \t`);
@@ -163,11 +169,11 @@ async function scan_block(limit=100000, loop=true) {
     }
 
     if (loop == true) {
-        console.log("继续扫描下一轮");
         // 新区块 10 秒一个，等待 10 秒，再执行 
         var timer = 10000; // 10秒
-        if( lastBlockIdOnChain - endBlockId > 100) {
+        if( catchUp ) {
             timer = 1000; // 1秒
+            console.log("继续扫描下一轮");
         }
         setTimeout(() => {
             scan_block(limit, loop)
@@ -175,6 +181,7 @@ async function scan_block(limit=100000, loop=true) {
     }
 }
 
+var roundNumber = 0;
 scan_block();
 
 
