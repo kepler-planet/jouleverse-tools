@@ -32,4 +32,4 @@
 - `from_address`: 交易发起地址
 - `to_address`: 交易接收地址
 
-> 示例: [/api/txs?start_block=4015500&end_block=4018500](/api/txs?start_block=4015500&end_block=4018500)
+> 示例: [/api/txs?start_block=4015500&end_block=4018500&page=2](/api/txs?start_block=4015500&end_block=4018500&page=2)
