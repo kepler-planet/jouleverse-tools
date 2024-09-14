@@ -139,7 +139,7 @@ router.get('/api/txs', async (ctx, next) => {
     // ctx.router available
     var offset = 0;
     var limit = 10;
-    var sql = 'SELECT * FROM `j_tx` WHERE 1 ';
+    var sql = 'SELECT id FROM `j_tx` WHERE 1 ';
     var params = [];
     if (ctx.query.start_block) {
         var start_block = Number(ctx.query.start_block);
@@ -180,6 +180,17 @@ router.get('/api/txs', async (ctx, next) => {
     params.push(limit, offset);
 
     const promisePool = connection.promise();
+    const [idResults, idFields] = await promisePool.query(sql, params);
+    if (!idResults) {
+        ctx.body = { status: 'error', message: 'No data'};
+        return;
+    }
+    var ids = [];
+    for (var i = 0; i < idResults.length; i++) {
+        ids.push(idResults[i].id);
+    }
+    sql = 'SELECT * FROM `j_tx` WHERE id IN (?)';
+    params = [ids];
     const [results, fields] = await promisePool.query(sql, params);
     if (results) {
         for (var i = 0; i < results.length; i++) {
