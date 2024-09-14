@@ -181,7 +181,7 @@ router.get('/api/txs', async (ctx, next) => {
 
     const promisePool = connection.promise();
     const [idResults, idFields] = await promisePool.query(sql, params);
-    if (!idResults) {
+    if (!idResults || idResults.length == 0) {
         ctx.body = { status: 'error', message: 'No data'};
         return;
     }
