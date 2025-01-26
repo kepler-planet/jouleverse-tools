@@ -175,7 +175,7 @@ router.get('/api/txs', async (ctx, next) => {
         offset = Number(ctx.query.page) * limit;
     }
     
-    sql += `ORDER BY block_id desc `;
+    sql += `ORDER BY block_id DESC, id DESC `;
     sql += `LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
@@ -189,7 +189,7 @@ router.get('/api/txs', async (ctx, next) => {
     for (var i = 0; i < idResults.length; i++) {
         ids.push(idResults[i].id);
     }
-    sql = 'SELECT * FROM `j_tx` WHERE id IN (?)';
+    sql = 'SELECT * FROM `j_tx` WHERE id IN (?) ORDER BY block_id DESC, id DESC';
     params = [ids];
     const [results, fields] = await promisePool.query(sql, params);
     if (results) {
