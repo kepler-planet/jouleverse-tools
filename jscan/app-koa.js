@@ -84,14 +84,15 @@ router.get('/api/tx/:txid', async (ctx, next) => {
     }
 
     try {
-        // 步骤1: 先从数据库查询交易信息和区块高度
         const promisePool = connection.promise();
+        var tx = null;
+        var querySource = '';
+
+        // 步骤1: 先从数据库查询交易信息和区块高度
         const [dbResults] = await promisePool.query(
-            'SELECT * FROM j_tx WHERE tx_hash = ? LIMIT 1',
+            'SELECT block_id, receipt_status, status as tx_status FROM j_tx WHERE tx_hash = ? LIMIT 1',
             [txid]
         );
-
-        var tx = null;
 
         if (dbResults && dbResults.length > 0) {
             // 数据库中找到交易，获取区块高度
@@ -103,32 +104,35 @@ router.get('/api/tx/:txid', async (ctx, next) => {
             if (block && block.transactions) {
                 // 在区块中查找指定交易
                 tx = block.transactions.find(t => t.hash === txid);
+                querySource = 'database_block_query';
             }
 
             if (tx) {
                 // 如果区块链中的交易数据比数据库更完整，可以合并数据
                 // 数据库中的数据作为备选
                 tx.dbData = {
-                    id: dbTx.id,
                     receipt_status: dbTx.receipt_status,
-                    status: dbTx.status
+                    status: dbTx.tx_status
                 };
             }
-        } else {
-            // 数据库中没有找到，尝试直接通过区块链查询
-            console.log(`Transaction not found in database, trying direct blockchain query`);
-            tx = await web3.eth.getTransaction(txid);
         }
 
+        // 步骤2: 如果数据库方法没有找到交易，直接尝试web3查询
         if (!tx) {
-            // 如果还是找不到，尝试使用归档服务（如果配置了）
-            if (process.env.ARCHIVE_RPC_URL) {
-                console.log(`Trying archive service`);
-                const archiveWeb3 = new Web3(process.env.ARCHIVE_RPC_URL);
-                tx = await archiveWeb3.eth.getTransaction(txid);
+            console.log(`Transaction not found via database, trying direct web3 query`);
+            try {
+                tx = await web3.eth.getTransaction(txid);
+                if (tx) {
+                    querySource = 'direct_web3_query';
+                }
+            } catch (web3Error) {
+                console.log(`Web3 direct query failed: ${web3Error.message}`);
+                // web3查询失败，tx保持为null
+                // 这里可以记录错误日志，但继续返回404而不是500
             }
         }
 
+        // 步骤3: 如果找到交易，进行输入解码
         if (tx && tx.input != '0x') {
             var decodedData = abiDecoder.decodeMethod(tx.input);
             console.log("decodedData:");
@@ -138,13 +142,79 @@ router.get('/api/tx/:txid', async (ctx, next) => {
             }
         }
 
+        // 步骤4: 返回结果
         if (tx) {
+            tx.querySource = querySource; // 添加查询源信息，方便调试
             ctx.body = { status: 'ok', tx: tx};
         } else {
             ctx.body = { status: 'error', message: 'Transaction not found in database or blockchain'};
         }
+
     } catch (error) {
         console.error('Transaction query error:', error);
+        ctx.body = { status: 'error', message: 'Failed to query transaction: ' + error.message};
+    }
+});
+
+// 简化版本：直接从数据库返回交易数据（不通过区块链验证）
+router.get('/api/tx/:txid/simple', async (ctx) => {
+    var txid = ctx.params.txid;
+    if (txid.length != 66) {
+        ctx.body = { status: 'error', message: 'Invalid txid'};
+        return;
+    }
+
+    try {
+        const promisePool = connection.promise();
+
+        // 直接从数据库查询完整交易信息
+        const [dbResults] = await promisePool.query(
+            `SELECT
+                tx_hash as hash,
+                block_id as blockNumber,
+                \`from\`,
+                \`to\`,
+                value,
+                gas,
+                gas_price as gasPrice,
+                input,
+                nonce,
+                tx_index as transactionIndex,
+                receipt_status as status
+            FROM j_tx
+            WHERE tx_hash = ?
+            LIMIT 1`,
+            [txid]
+        );
+
+        if (dbResults && dbResults.length > 0) {
+            const tx = dbResults[0];
+
+            // 添加区块哈希和时间戳
+            const [blockResults] = await promisePool.query(
+                'SELECT block_hash, timestamp FROM j_block WHERE block_id = ?',
+                [tx.blockNumber]
+            );
+
+            if (blockResults && blockResults.length > 0) {
+                tx.blockHash = blockResults[0].block_hash;
+                tx.timestamp = blockResults[0].timestamp;
+            }
+
+            // 解码交易输入
+            if (tx.input && tx.input != '0x') {
+                var decodedData = abiDecoder.decodeMethod(tx.input);
+                if (decodedData) {
+                    tx.inputDecode = decodedData;
+                }
+            }
+
+            ctx.body = { status: 'ok', tx: tx, source: 'database' };
+        } else {
+            ctx.body = { status: 'error', message: 'Transaction not found in database' };
+        }
+    } catch (error) {
+        console.error('Simple transaction query error:', error);
         ctx.body = { status: 'error', message: 'Failed to query transaction: ' + error.message};
     }
 });
