@@ -82,11 +82,54 @@ router.get('/api/tx/:txid', async (ctx, next) => {
         ctx.body = { status: 'error', message: 'Invalid txid'};
         return;
     }
-    // console.log(txid);
+
     try {
-        var tx = await web3.eth.getTransaction(txid);
+        // 步骤1: 先从数据库查询交易信息和区块高度
+        const promisePool = connection.promise();
+        const [dbResults] = await promisePool.query(
+            'SELECT * FROM j_tx WHERE tx_hash = ? LIMIT 1',
+            [txid]
+        );
+
+        var tx = null;
+
+        if (dbResults && dbResults.length > 0) {
+            // 数据库中找到交易，获取区块高度
+            const dbTx = dbResults[0];
+            console.log(`Found transaction in database, block_id: ${dbTx.block_id}`);
+
+            // 通过区块高度获取完整区块数据
+            const block = await web3.eth.getBlock(dbTx.block_id, true);
+            if (block && block.transactions) {
+                // 在区块中查找指定交易
+                tx = block.transactions.find(t => t.hash === txid);
+            }
+
+            if (tx) {
+                // 如果区块链中的交易数据比数据库更完整，可以合并数据
+                // 数据库中的数据作为备选
+                tx.dbData = {
+                    id: dbTx.id,
+                    receipt_status: dbTx.receipt_status,
+                    status: dbTx.status
+                };
+            }
+        } else {
+            // 数据库中没有找到，尝试直接通过区块链查询
+            console.log(`Transaction not found in database, trying direct blockchain query`);
+            tx = await web3.eth.getTransaction(txid);
+        }
+
+        if (!tx) {
+            // 如果还是找不到，尝试使用归档服务（如果配置了）
+            if (process.env.ARCHIVE_RPC_URL) {
+                console.log(`Trying archive service`);
+                const archiveWeb3 = new Web3(process.env.ARCHIVE_RPC_URL);
+                tx = await archiveWeb3.eth.getTransaction(txid);
+            }
+        }
+
         if (tx && tx.input != '0x') {
-            console.log
             var decodedData = abiDecoder.decodeMethod(tx.input);
             console.log("decodedData:");
             console.log(decodedData);
@@ -94,12 +137,16 @@ router.get('/api/tx/:txid', async (ctx, next) => {
                 tx.inputDecode = decodedData;
             }
         }
-        ctx.body = { status: 'ok' , tx: tx};
-    } catch (error) {
-        ctx.body = { status: 'error', message: 'Invalid txid'};
-    }
 
-    // ctx.body = { status: 'ok' , txid: ctx.params.txid};
+        if (tx) {
+            ctx.body = { status: 'ok', tx: tx};
+        } else {
+            ctx.body = { status: 'error', message: 'Transaction not found in database or blockchain'};
+        }
+    } catch (error) {
+        console.error('Transaction query error:', error);
+        ctx.body = { status: 'error', message: 'Failed to query transaction: ' + error.message};
+    }
 });
 
 router.get('/api/block/:blockid', async (ctx, next) => {
